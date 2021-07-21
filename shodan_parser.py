@@ -6,6 +6,7 @@
 #  1. A list of IP addresses and open ports - <output base name>_ports.csv
 #  2. A list of vulnerabilities - <output base name>_vulns.csv
 #  3. A list of HTTP servers - <output base name>_http.csv
+#  4. A list of accessible IP addresses - <output base name>_ips.txt
 # 
 # Usage:
 # shodan_parser.py <shodan file> <output base name>
@@ -13,6 +14,7 @@
 
 import argparse
 import csv
+import ipaddress
 import json
 import os
 
@@ -73,6 +75,7 @@ def main():
     ports = []
     http = []
     vulns = []
+    addresses = set()
     for l in json_lines:
         json_obj = json.loads(l)
         # port information
@@ -119,17 +122,26 @@ def main():
                 # print("DEBUG vuln_data_dict = {}".format(vuln_data_dict))
                 vulns.append(vuln_data_dict)
         
+    # create the list of addresses
+    for p in ports:
+        addresses.add(p['ip_str'])
+    
     # print a summary of what was found
-    print("Parsed {} port entries, {} http entries, {} vulnerabilities".format(len(ports), len(http), len(vulns)))
+    print("Parsed {} IP addresses, {} port entries, {} http entries, {} vulnerabilities".format(len(list(addresses)), len(ports), len(http), len(vulns)))
 
     # output
     port_output_file = "{}_ports.csv".format(output_base)
     http_output_file = "{}_http.csv".format(output_base)
     vuln_output_file = "{}_vulns.csv".format(output_base)
+    addr_output_file = "{}_ips.txt".format(output_base)
 
     write_csv(port_output_file, ports, port_fields)
     write_csv(http_output_file, http, http_fields)
     write_csv(vuln_output_file, vulns, vulnerability_fields)
+
+    with open(addr_output_file, 'w') as ip_fd:
+        for a in sorted(list(addresses)):
+            ip_fd.write(a + "\n")
 
 
 if __name__ == "__main__":
